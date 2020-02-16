@@ -1,0 +1,106 @@
+#!/usr/bin/tclsh
+
+proc print_header {} {
+	puts {
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>fs2tabtree</title>
+<style>
+html {
+	padding: 1em;
+	font-family: 'Jetbrains Mono', Monospace;
+	background: #333;
+	color: #ccc;
+	font-size: 16pt; /* TODO-LH: just for me */
+}
+section,
+input[type=radio] {
+	display: none;
+}
+input[type=radio]:checked + label {
+	border-color: #ccc;
+}
+input[type=radio]:checked + label + section {
+	display: flex;
+}
+section {
+	flex-wrap: wrap;
+	flex-direction: column;
+	align-content: flex-start;
+	font-size: 0.58rem; /* TODO-LH: remove me */
+	/* TODO-LH: if dir content is in wrong place, fiddle above number...*/
+}
+body > section {
+	display: flex;
+}
+label {
+	user-select: none;
+	display: inline-block;
+	padding: 0.1rem 0.2rem;
+	border: 1px solid transparent;
+}
+label:hover {
+	background: #555;
+}
+</style>
+</head>
+<body>
+	}
+}
+
+proc print_footer {} {
+	puts {
+</body>
+</html>
+	}
+}
+
+proc sorted_children {dir} {
+	set dirs  [lsort [glob -nocomplain -directory $dir -types d *]]
+	set files [lsort [glob -nocomplain -directory $dir -types f *]]
+	return [list {*}$dirs {*}$files]
+}
+
+proc loot_path {path root} {
+	set path_type [file type $path]
+	set path_tail [file tail $path]
+	set parent    [file dirname $path]
+
+	switch $path_type {
+		directory {
+			set children [sorted_children $path]
+			set count    [llength $children]
+			set order    [expr $count + 1]
+
+			# TODO-LH: replace "rem" here with "lh" (assuming lh contains padding+border...)
+			if { "$path" == "$root" } {
+				puts "<section style='height:${count}rem'>"
+			} else {
+				puts "<input name='${parent}' id='${path}' type='radio'/>"
+				puts "<label for='${path}'>${path_tail}</label>"
+				puts "<section style='order:${order};height:${count}rem'>"
+			}
+
+			foreach child $children {
+				loot_path $child $root
+			}
+
+			puts "</section>"
+		}
+		file {
+			puts "<input name='${parent}' id='${path}' type='radio'/>"
+			puts "<label for='${path}'>${path_tail}</label>"
+		}
+	}
+}
+
+if { $argc < 1 } {
+	puts "gimme a path to directory"
+	exit 1
+}
+
+print_header
+loot_path [lindex $argv 0] [lindex $argv 0]
+print_footer

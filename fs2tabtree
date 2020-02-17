@@ -66,7 +66,8 @@ proc sorted_children {dir} {
 proc loot_path {path root} {
 	set path_type [file type $path]
 	set path_tail [file tail $path]
-	set parent    [file dirname $path]
+	set relative  [string range $path [string length $root] [string length $path]]
+	set parent    [file dirname $relative]
 
 	switch $path_type {
 		directory {
@@ -78,8 +79,8 @@ proc loot_path {path root} {
 			if { "$path" == "$root" } {
 				puts "<section style='height:${count}rem'>"
 			} else {
-				puts "<input name='${parent}' id='${path}' type='radio'/>"
-				puts "<label for='${path}'>${path_tail}</label>"
+				puts "<input name='${parent}' id='${relative}' type='radio'/>"
+				puts "<label for='${relative}'>${path_tail}</label>"
 				puts "<section style='order:${order};height:${count}rem'>"
 			}
 
@@ -90,8 +91,8 @@ proc loot_path {path root} {
 			puts "</section>"
 		}
 		file {
-			puts "<input name='${parent}' id='${path}' type='radio'/>"
-			puts "<label for='${path}'>${path_tail}</label>"
+			puts "<input name='${parent}' id='${relative}' type='radio'/>"
+			puts "<label for='${relative}'>${path_tail}</label>"
 		}
 	}
 }

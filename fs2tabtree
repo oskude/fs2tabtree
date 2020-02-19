@@ -9,40 +9,46 @@ proc print_header {} {
 <title>fs2tabtree</title>
 <style>
 html {
-	padding: 1em;
-	font-family: 'Jetbrains Mono', Monospace;
-	background: #333;
 	color: #ccc;
-	font-size: 16pt; /* TODO-LH: just for me */
+	background: #333;
+	padding: 1em;
+	font-family: 'Jetbrains Mono', monospace;
 }
-section,
-input[type=radio] {
+/* initial state */
+.tabtree {
+	line-height: 1.6em;
+}
+.tabtree section {
+	clip: rect(0,0,0,0); position: absolute; /* hide without using display prop */
+}
+.tabtree label {
+	user-select: none;
+	border: 1px solid transparent;
+	padding: 0.1em 0.5em;
+}
+.tabtree label:hover {
+	background: #555;
+}
+/* checked state */
+.tabtree input:checked + label {
+	border: 1px solid #ccc;
+}
+.tabtree input:checked + label + section {
+	clip: auto; position: static; /* unhide without using display prop */
+}
+/* hide radio buttons */
+.tabtree input {
 	display: none;
 }
-input[type=radio]:checked + label {
-	border-color: #ccc;
-}
-input[type=radio]:checked + label + section {
+/* hacks to make it tabs... */
+.tabtree,
+.tabtree section {
+	padding: 0;
+	margin: 0;
 	display: flex;
-}
-section {
 	flex-wrap: wrap;
 	flex-direction: column;
 	align-content: flex-start;
-	font-size: 0.58rem; /* TODO-LH: remove me */
-	/* TODO-LH: if dir content is in wrong place, fiddle above number...*/
-}
-body > section {
-	display: flex;
-}
-label {
-	user-select: none;
-	display: inline-block;
-	padding: 0.1rem 0.2rem;
-	border: 1px solid transparent;
-}
-label:hover {
-	background: #555;
 }
 </style>
 </head>
@@ -53,13 +59,46 @@ label:hover {
 proc print_footer {} {
 	puts {
 </body>
+<script>
+/**
+convert inline style unit lh to px. (only one per style, cause lazy...)
+@root root html dom node. (@selector wont find this!)
+@tpl use this html element for measuring. (will be created+deleted)
+@lazy if true, use the first calculated lh height for everything
+@selector change only these css matching elements
+*/
+function lh2px (root, tpl="span", lazy = true, selector = "*[style]")
+{
+	let lh_in_px = null;
+	let lh_regex = /([a-z-]+)\s*:\s*([0-9]+)lh/;
+	for (let elem of root.querySelectorAll(selector)) {
+		let lh_match = elem.getAttribute("style").match(lh_regex);
+		if (!lh_match) {
+			continue;
+		}
+		let lh_prop = lh_match[1];
+		let lh_valu = lh_match[2];
+		if (!lazy || !lh_in_px) {
+			let delme = document.createElement(tpl);
+			delme.textContent = "X";
+			elem.appendChild(delme);
+			lh_in_px = delme.getBoundingClientRect().height; // TODO: will lh even be this big?
+			elem.removeChild(delme);
+			delete delme;
+		}
+		elem.style[lh_prop] = (lh_in_px * lh_valu) + "px";
+	}
+}
+let root = document.querySelector(".tabtree").parentNode;
+lh2px(root, "label");
+</script>
 </html>
 	}
 }
 
 proc sorted_children {dir} {
-	set dirs  [lsort [glob -nocomplain -directory $dir -types d *]]
-	set files [lsort [glob -nocomplain -directory $dir -types f *]]
+	set dirs  [lsort -dictionary [glob -nocomplain -directory $dir -types d *]]
+	set files [lsort -dictionary [glob -nocomplain -directory $dir -types f *]]
 	return [list {*}$dirs {*}$files]
 }
 
@@ -75,13 +114,12 @@ proc loot_path {path root} {
 			set count    [llength $children]
 			set order    [expr $count + 1]
 
-			# TODO-LH: replace "rem" here with "lh" (assuming lh contains padding+border...)
 			if { "$path" == "$root" } {
-				puts "<section style='height:${count}rem'>"
+				puts "<section class='tabtree' style='height:${count}lh'>"
 			} else {
-				puts "<input name='${parent}' id='${relative}' type='radio'/>"
+				puts "<input  id='${relative}' name='${parent}' type='radio'/>"
 				puts "<label for='${relative}'>${path_tail}</label>"
-				puts "<section style='order:${order};height:${count}rem'>"
+				puts "<section style='order:${order};height:${count}lh'>"
 			}
 
 			foreach child $children {
@@ -91,7 +129,7 @@ proc loot_path {path root} {
 			puts "</section>"
 		}
 		file {
-			puts "<input name='${parent}' id='${relative}' type='radio'/>"
+			puts "<input  id='${relative}' name='${parent}' type='radio'/>"
 			puts "<label for='${relative}'>${path_tail}</label>"
 		}
 	}
